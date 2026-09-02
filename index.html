@@ -1,0 +1,1239 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Calculadora de receitas fit, diário alimentar e meta de calorias para o dia a dia da Clara.">
+<title>Clara Fit</title>
+<script>
+  // Dados do projeto Supabase (Project Settings -> API no supabase.com).
+  // Deixando em branco, o app funciona normalmente salvando só neste navegador.
+  window.CLARA_FIT_CONFIG = {
+    supabaseUrl: "",
+    supabaseAnonKey: ""
+  };
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --paper:#FAFAF7;
+    --surface:#FFFFFF;
+    --surface-2:#F1EEE6;
+    --ink:#15140F;
+    --muted:#57534A;
+    --line:#DEDACC;
+    --accent:#0F0E0C;
+    --accent-contrast:#FFFFFF;
+    --font-display:'Space Grotesk','Arial Narrow',sans-serif;
+    --font-body:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+    --font-mono:'IBM Plex Mono','Courier New',monospace;
+  }
+
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  img{max-width:100%;}
+  h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0;letter-spacing:-0.01em;}
+  p{margin:0;}
+  a{color:inherit;}
+  button,input,select{font-family:inherit;font-size:inherit;color:inherit;}
+  button{cursor:pointer;}
+  ::selection{background:var(--ink);color:var(--paper);}
+  :focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001ms !important;transition-duration:.001ms !important;}
+  }
+
+  .num{font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+
+  .page{max-width:1080px;margin:0 auto;padding:0 24px 96px;}
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    display:flex;align-items:center;gap:24px;
+    padding:22px 0;flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:center;gap:10px;margin-right:auto;}
+  .brand-mark{
+    width:34px;height:34px;border:2px solid var(--ink);display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-display);font-weight:700;font-size:14px;flex:none;
+  }
+  .brand-text{display:flex;flex-direction:column;line-height:1.15;}
+  .brand-name{font-family:var(--font-display);font-weight:700;font-size:15px;letter-spacing:.04em;}
+  .brand-tag{font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;}
+
+  .tabs{display:flex;gap:4px;background:var(--surface-2);padding:4px;border:1px solid var(--line);}
+  .tab{
+    border:none;background:transparent;padding:9px 16px;font-size:13.5px;font-weight:600;
+    color:var(--muted);letter-spacing:.02em;
+  }
+  .tab.active{background:var(--ink);color:var(--paper);}
+
+  .sync-status{
+    font-family:var(--font-mono);font-size:11.5px;color:var(--muted);
+    display:flex;align-items:center;gap:7px;white-space:nowrap;
+  }
+  .sync-dot{width:7px;height:7px;border-radius:50%;background:var(--ink);flex:none;}
+  .sync-dot.local{background:var(--surface);border:1.5px solid var(--muted);}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    display:grid;grid-template-columns:1.1fr .9fr;gap:56px;
+    padding:40px 0 72px;align-items:center;
+  }
+  .eyebrow{
+    font-family:var(--font-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:14px;display:block;
+  }
+  .hero h1{font-size:clamp(30px,4vw,44px);font-weight:700;line-height:1.08;margin-bottom:20px;}
+  .hero-sub{font-size:16.5px;color:var(--muted);max-width:46ch;margin-bottom:28px;}
+  .hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:22px;}
+  .hero-trust{font-size:13px;color:var(--muted);max-width:44ch;border-left:2px solid var(--line);padding-left:12px;}
+
+  .btn{
+    border:1.5px solid var(--ink);padding:13px 22px;font-weight:600;font-size:14.5px;
+    letter-spacing:.01em;background:var(--surface);
+  }
+  .btn-primary{background:var(--accent);color:var(--accent-contrast);}
+  .btn-primary:hover{opacity:.88;}
+  .btn-ghost{background:transparent;}
+  .btn-ghost:hover{background:var(--surface-2);}
+  .btn-sm{padding:7px 12px;font-size:12.5px;}
+  .btn-danger-outline{border-color:var(--muted);color:var(--muted);}
+  .btn-danger-outline:hover{border-color:var(--ink);color:var(--ink);}
+  .btn[disabled]{opacity:.4;cursor:not-allowed;}
+
+  /* ---------- Nutrition-label panel ---------- */
+  .label-panel{
+    background:var(--surface);border:2.5px solid var(--ink);padding:22px 24px 24px;
+  }
+  .label-title{
+    font-family:var(--font-display);font-weight:700;font-size:19px;
+    padding-bottom:10px;border-bottom:7px solid var(--ink);margin-bottom:4px;
+  }
+  .label-sub{font-size:11.5px;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:2px;}
+  .label-row{
+    display:flex;justify-content:space-between;align-items:baseline;
+    padding:11px 0;border-bottom:1px solid var(--line);
+  }
+  .label-row:last-of-type{border-bottom:none;}
+  .label-row .lbl{font-size:14px;font-weight:600;}
+  .label-row .val{font-family:var(--font-mono);font-size:16px;font-weight:600;}
+  .label-row.big .lbl{font-size:15.5px;font-weight:700;}
+  .label-row.big .val{font-size:26px;}
+  .label-row.remain .val{font-weight:700;}
+
+  .bar-track{
+    position:relative;height:14px;background:var(--surface-2);border:1.5px solid var(--ink);
+    margin:14px 0 4px;overflow:hidden;
+  }
+  .bar-fill{position:absolute;left:0;top:0;bottom:0;background:var(--accent);}
+  .bar-fill.over{
+    background-image:repeating-linear-gradient(45deg,var(--ink) 0 5px, var(--surface-2) 5px 10px);
+  }
+  .bar-caption{font-size:11.5px;color:var(--muted);font-family:var(--font-mono);}
+  .bar-caption.warn{color:var(--ink);font-weight:600;}
+
+  /* ---------- Layout blocks ---------- */
+  main{padding-top:8px;}
+  .tabpanel{display:none;}
+  .tabpanel.active{display:block;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+  .panel-head{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:36px 0 22px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:28px;
+  }
+  .panel-head h2{font-size:24px;}
+  .panel-head input[type="date"]{
+    border:1.5px solid var(--ink);background:var(--surface);padding:9px 12px;font-family:var(--font-mono);font-size:13.5px;
+  }
+
+  .card{background:var(--surface);border:1.5px solid var(--line);padding:24px;}
+
+  .diary-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:24px;align-items:start;}
+  table{width:100%;border-collapse:collapse;}
+  th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);font-size:13.5px;}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;}
+  td.num,th.num{text-align:right;font-family:var(--font-mono);}
+  tr:last-child td{border-bottom:none;}
+  .row-remove{border:none;background:transparent;color:var(--muted);font-size:16px;line-height:1;padding:2px 6px;}
+  .row-remove:hover{color:var(--ink);}
+
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+  .field label{font-size:12.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+  .field input,.field select{
+    border:1.5px solid var(--line);padding:10px 12px;background:var(--surface);
+  }
+  .field input:focus,.field select:focus{border-color:var(--ink);}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .radio-row{display:flex;gap:18px;margin-bottom:16px;}
+  .radio-row label{display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:500;}
+
+  .empty-state{color:var(--muted);font-size:13.5px;padding:18px 0;}
+
+  .recipe-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px;margin-bottom:20px;}
+  .recipe-card{border:1.5px solid var(--line);background:var(--surface);padding:18px;display:flex;flex-direction:column;gap:10px;}
+  .recipe-card .rc-name{font-family:var(--font-display);font-weight:600;font-size:16px;}
+  .recipe-card .rc-example{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+  .rc-kcal{font-family:var(--font-mono);font-size:24px;font-weight:600;}
+  .rc-kcal small{font-family:var(--font-body);font-size:11px;color:var(--muted);font-weight:500;}
+  .rc-macros{display:flex;gap:14px;font-family:var(--font-mono);font-size:11.5px;color:var(--muted);}
+  .rc-actions{display:flex;gap:8px;margin-top:auto;padding-top:6px;}
+  .new-recipe-tile{
+    border:1.5px dashed var(--line);display:flex;align-items:center;justify-content:center;
+    color:var(--muted);font-weight:600;font-size:14px;min-height:150px;background:transparent;
+  }
+  .new-recipe-tile:hover{border-color:var(--ink);color:var(--ink);}
+
+  .ingredient-row{
+    display:grid;grid-template-columns:2fr 90px 90px auto;gap:10px;align-items:center;margin-bottom:10px;
+  }
+  .ingredient-row select,.ingredient-row input{border:1.5px solid var(--line);padding:10px 12px;background:var(--surface);width:100%;}
+  .ingredient-row select:focus,.ingredient-row input:focus{border-color:var(--ink);}
+  .ingredient-row-head{margin-bottom:6px;}
+  .ing-col-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+  .ingredient-row .custom-fields{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:-2px;}
+  .custom-fields input{border:1.5px solid var(--line);padding:10px 12px;background:var(--surface);}
+  .ing-remove{border:1.5px solid var(--line);background:var(--surface);padding:10px 12px;}
+  .ing-remove:hover{border-color:var(--ink);}
+  .recipe-totals{
+    display:flex;gap:24px;flex-wrap:wrap;border-top:2px solid var(--ink);padding-top:14px;margin-top:6px;margin-bottom:18px;
+  }
+  .recipe-totals .rt-item{font-size:12.5px;color:var(--muted);}
+  .recipe-totals .rt-item b{display:block;font-family:var(--font-mono);font-size:18px;color:var(--ink);font-weight:600;}
+
+  .progress-grid{display:grid;grid-template-columns:.8fr 1.2fr;gap:24px;margin-bottom:24px;align-items:start;}
+  .chart-card svg{width:100%;height:auto;display:block;}
+  .weight-stats{display:flex;gap:22px;flex-wrap:wrap;margin-bottom:16px;}
+  .weight-stats .ws{font-size:12px;color:var(--muted);}
+  .weight-stats .ws b{display:block;font-family:var(--font-mono);font-size:19px;color:var(--ink);font-weight:600;}
+
+  .meta-form{max-width:640px;}
+  .meta-result{max-width:640px;margin-top:20px;}
+  .warning-box{
+    border:2px solid var(--ink);padding:14px 16px;font-size:13px;margin-top:16px;background:var(--surface-2);
+  }
+  .warning-box .wb-title{font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.06em;display:block;margin-bottom:4px;}
+
+  footer{
+    border-top:1px solid var(--line);margin-top:56px;padding-top:22px;
+    font-size:12px;color:var(--muted);max-width:70ch;
+  }
+
+  @media (max-width:820px){
+    .hero{grid-template-columns:1fr;padding-top:12px;}
+    .diary-grid,.progress-grid{grid-template-columns:1fr;}
+    .field-row{grid-template-columns:1fr;}
+    .topbar{gap:14px;}
+  }
+  @media (max-width:520px){
+    .ingredient-row{grid-template-columns:1fr;}
+    .ingredient-row .custom-fields{grid-template-columns:1fr 1fr;}
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">CF</span>
+      <div class="brand-text">
+        <span class="brand-name">CLARA FIT</span>
+        <span class="brand-tag">Diário nutricional</span>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-tab="hoje" type="button">Hoje</button>
+      <button class="tab" data-tab="receitas" type="button">Receitas</button>
+      <button class="tab" data-tab="progresso" type="button">Progresso</button>
+      <button class="tab" data-tab="meta" type="button">Meta</button>
+    </nav>
+    <div class="sync-status" id="syncStatus"><span class="sync-dot local" id="syncDot"></span><span id="syncLabel">verificando…</span></div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-copy">
+      <span class="eyebrow">Feito para Clara Larissa</span>
+      <h1>Sua cozinha fit, com as contas sempre batendo.</h1>
+      <p class="hero-sub">Cadastre suas receitas fit, calcule calorias e macros automaticamente por ingrediente e veja na hora se o dia está dentro da meta — sem planilha, sem chute.</p>
+      <div class="hero-actions">
+        <button class="btn btn-primary" data-goto="hoje" type="button">Registrar refeição de hoje</button>
+        <button class="btn btn-ghost" data-goto="receitas" type="button">Cadastrar primeira receita</button>
+      </div>
+      <p class="hero-trust">Meta diária calculada pela fórmula de Mifflin-St Jeor, o mesmo método que nutricionistas usam para estimar gasto calórico.</p>
+    </div>
+    <div class="hero-panel">
+      <div class="label-panel" id="heroSummary"></div>
+    </div>
+  </section>
+
+  <main>
+    <section id="tab-hoje" class="tabpanel active">
+      <div class="panel-head">
+        <h2>Hoje</h2>
+        <input type="date" id="diaryDate">
+      </div>
+
+      <div class="diary-grid">
+        <div class="card">
+          <h3 style="margin-bottom:14px;font-size:15px;">Refeições registradas</h3>
+          <table id="diaryTable">
+            <thead><tr><th>Item</th><th>Qtd.</th><th class="num">Kcal</th><th></th></tr></thead>
+            <tbody id="diaryBody"></tbody>
+          </table>
+          <p class="empty-state" id="diaryEmpty" hidden>Nenhum registro ainda nesta data.</p>
+        </div>
+
+        <form class="card" id="addEntryForm">
+          <h3 style="margin-bottom:14px;font-size:15px;">Adicionar item</h3>
+          <div class="radio-row">
+            <label><input type="radio" name="source" value="recipe" checked> Minha receita</label>
+            <label><input type="radio" name="source" value="ingredient"> Ingrediente</label>
+            <label><input type="radio" name="source" value="manual"> Valor manual</label>
+          </div>
+          <div id="entryFields"></div>
+          <button class="btn btn-primary" type="submit" style="width:100%;margin-top:4px;">Adicionar à refeição</button>
+        </form>
+      </div>
+    </section>
+
+    <section id="tab-receitas" class="tabpanel">
+      <div class="panel-head">
+        <h2>Receitas</h2>
+        <button class="btn btn-primary" id="newRecipeBtn" type="button">Nova receita</button>
+      </div>
+
+      <div id="recipeFormWrap" hidden>
+        <form class="card" id="recipeForm" style="margin-bottom:24px;">
+          <input type="hidden" id="recipeId">
+          <div class="field-row">
+            <div class="field">
+              <label for="recipeName">Nome da receita</label>
+              <input id="recipeName" required placeholder="Ex.: Omelete fit de claras">
+            </div>
+            <div class="field">
+              <label for="recipeServings">Rendimento (porções)</label>
+              <input id="recipeServings" type="number" min="1" step="1" value="1" required>
+            </div>
+          </div>
+
+          <label style="font-size:12.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:8px;">Ingredientes</label>
+          <div id="ingredientRows"></div>
+          <button class="btn btn-ghost btn-sm" id="addIngredientBtn" type="button" style="margin-bottom:16px;">+ Adicionar ingrediente</button>
+
+          <div class="recipe-totals" id="recipeTotals"></div>
+
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-primary" type="submit">Salvar receita</button>
+            <button class="btn btn-ghost" id="cancelRecipeBtn" type="button">Cancelar</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="recipe-grid" id="recipeGrid"></div>
+    </section>
+
+    <section id="tab-progresso" class="tabpanel">
+      <div class="panel-head"><h2>Progresso de peso</h2></div>
+
+      <div class="progress-grid">
+        <form class="card" id="weightForm">
+          <div class="field">
+            <label for="weightDate">Data</label>
+            <input type="date" id="weightDate" required>
+          </div>
+          <div class="field">
+            <label for="weightKg">Peso (kg)</label>
+            <input type="number" id="weightKg" min="1" step="0.1" required placeholder="Ex.: 68.4">
+          </div>
+          <button class="btn btn-primary" type="submit" style="width:100%;">Registrar peso</button>
+        </form>
+
+        <div class="card chart-card">
+          <div class="weight-stats" id="weightStats"></div>
+          <div id="chartHolder"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <table id="weightTable">
+          <thead><tr><th>Data</th><th class="num">Peso (kg)</th><th></th></tr></thead>
+          <tbody id="weightBody"></tbody>
+        </table>
+        <p class="empty-state" id="weightEmpty" hidden>Nenhum peso registrado ainda.</p>
+      </div>
+    </section>
+
+    <section id="tab-meta" class="tabpanel">
+      <div class="panel-head"><h2>Meta de calorias</h2></div>
+
+      <form class="card meta-form" id="metaForm">
+        <div class="field">
+          <label for="metaName">Nome</label>
+          <input id="metaName" required>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="metaSex">Sexo</label>
+            <select id="metaSex">
+              <option value="f">Feminino</option>
+              <option value="m">Masculino</option>
+              <option value="o">Prefiro não dizer</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="metaAge">Idade</label>
+            <input id="metaAge" type="number" min="14" max="100" required>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="metaHeight">Altura (cm)</label>
+            <input id="metaHeight" type="number" min="120" max="230" required>
+          </div>
+          <div class="field">
+            <label for="metaWeight">Peso atual (kg)</label>
+            <input id="metaWeight" type="number" min="30" max="250" step="0.1" required>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="metaTarget">Peso alvo (kg)</label>
+            <input id="metaTarget" type="number" min="30" max="250" step="0.1" required>
+          </div>
+          <div class="field">
+            <label for="metaActivity">Nível de atividade</label>
+            <select id="metaActivity">
+              <option value="1.2">Sedentário (pouco ou nenhum exercício)</option>
+              <option value="1.375">Leve (1 a 3x por semana)</option>
+              <option value="1.55" selected>Moderado (3 a 5x por semana)</option>
+              <option value="1.725">Intenso (6 a 7x por semana)</option>
+              <option value="1.9">Atleta (treino diário intenso)</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="metaPace">Ritmo de emagrecimento</label>
+          <select id="metaPace">
+            <option value="0.25">Leve — 0,25 kg por semana</option>
+            <option value="0.5" selected>Moderado — 0,5 kg por semana</option>
+            <option value="0.75">Acelerado — 0,75 kg por semana</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" type="submit">Calcular e salvar meta</button>
+      </form>
+
+      <div class="card meta-result" id="metaResult" hidden></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Clara Fit — feito para Clara Larissa Ferreira de Araújo. Os valores nutricionais do catálogo são aproximados (base TACO/USDA) e a meta calórica é uma estimativa; para orientação individualizada, consulte um nutricionista.</p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ================= Catálogo de ingredientes (kcal/macros por 100g) ================= */
+  var CATALOG = [
+    {id:"peito_frango", name:"Peito de frango grelhado", kcal:165, protein:31, carbs:0, fat:3.6},
+    {id:"ovo_cozido", name:"Ovo inteiro cozido", kcal:155, protein:13, carbs:1.1, fat:11},
+    {id:"clara_ovo", name:"Clara de ovo", kcal:52, protein:11, carbs:0.7, fat:0.2},
+    {id:"patinho", name:"Carne bovina (patinho grelhado)", kcal:200, protein:32, carbs:0, fat:7},
+    {id:"tilapia", name:"Tilápia grelhada", kcal:128, protein:26, carbs:0, fat:2.7},
+    {id:"salmao", name:"Salmão grelhado", kcal:208, protein:20, carbs:0, fat:13},
+    {id:"atum_lata", name:"Atum em água (lata)", kcal:116, protein:26, carbs:0, fat:1},
+    {id:"tofu", name:"Tofu firme", kcal:76, protein:8, carbs:1.9, fat:4.8},
+    {id:"cottage", name:"Queijo cottage", kcal:98, protein:11, carbs:3.4, fat:4.3},
+    {id:"iogurte_desnatado", name:"Iogurte natural desnatado", kcal:41, protein:4, carbs:5.7, fat:0.2},
+    {id:"whey", name:"Whey protein (pó)", kcal:400, protein:80, carbs:8, fat:6},
+    {id:"leite_desnatado", name:"Leite desnatado", kcal:35, protein:3.4, carbs:5, fat:0.1},
+    {id:"leite_integral", name:"Leite integral", kcal:61, protein:3.2, carbs:4.7, fat:3.3},
+    {id:"arroz_branco", name:"Arroz branco cozido", kcal:128, protein:2.5, carbs:28, fat:0.2},
+    {id:"arroz_integral", name:"Arroz integral cozido", kcal:123, protein:2.6, carbs:25.8, fat:1},
+    {id:"batata_doce", name:"Batata doce cozida", kcal:77, protein:1.4, carbs:18, fat:0.1},
+    {id:"batata_inglesa", name:"Batata inglesa cozida", kcal:52, protein:1.2, carbs:12, fat:0},
+    {id:"aveia", name:"Aveia em flocos", kcal:394, protein:14, carbs:67, fat:8},
+    {id:"pao_frances", name:"Pão francês", kcal:300, protein:8, carbs:58, fat:3},
+    {id:"pao_integral", name:"Pão integral", kcal:253, protein:9, carbs:43, fat:4},
+    {id:"macarrao", name:"Macarrão cozido", kcal:158, protein:5.8, carbs:31, fat:0.9},
+    {id:"quinoa", name:"Quinoa cozida", kcal:120, protein:4.4, carbs:21, fat:1.9},
+    {id:"banana", name:"Banana", kcal:89, protein:1.1, carbs:23, fat:0.3},
+    {id:"maca", name:"Maçã", kcal:52, protein:0.3, carbs:14, fat:0.2},
+    {id:"mamao", name:"Mamão", kcal:43, protein:0.5, carbs:11, fat:0.3},
+    {id:"feijao", name:"Feijão carioca cozido", kcal:76, protein:4.8, carbs:13.6, fat:0.5},
+    {id:"lentilha", name:"Lentilha cozida", kcal:116, protein:9, carbs:20, fat:0.4},
+    {id:"grao_bico", name:"Grão-de-bico cozido", kcal:164, protein:8.9, carbs:27, fat:2.6},
+    {id:"brocolis", name:"Brócolis cozido", kcal:35, protein:2.4, carbs:7, fat:0.4},
+    {id:"couve", name:"Couve refogada", kcal:45, protein:2, carbs:5, fat:2},
+    {id:"alface", name:"Alface", kcal:15, protein:1.4, carbs:2.9, fat:0.2},
+    {id:"tomate", name:"Tomate", kcal:18, protein:0.9, carbs:3.9, fat:0.2},
+    {id:"cenoura", name:"Cenoura crua", kcal:41, protein:0.9, carbs:10, fat:0.2},
+    {id:"abobrinha", name:"Abobrinha refogada", kcal:31, protein:1.2, carbs:6, fat:0.3},
+    {id:"pepino", name:"Pepino", kcal:15, protein:0.7, carbs:3.6, fat:0.1},
+    {id:"espinafre", name:"Espinafre cru", kcal:23, protein:2.9, carbs:3.6, fat:0.4},
+    {id:"azeite", name:"Azeite de oliva", kcal:884, protein:0, carbs:0, fat:100},
+    {id:"oleo_coco", name:"Óleo de coco", kcal:862, protein:0, carbs:0, fat:100},
+    {id:"abacate", name:"Abacate", kcal:160, protein:2, carbs:8.5, fat:14.7},
+    {id:"castanha_para", name:"Castanha-do-pará", kcal:656, protein:14, carbs:12, fat:66},
+    {id:"amendoim", name:"Amendoim", kcal:567, protein:26, carbs:16, fat:49},
+    {id:"pasta_amendoim", name:"Pasta de amendoim integral", kcal:588, protein:25, carbs:20, fat:50},
+    {id:"chia", name:"Chia (semente)", kcal:486, protein:17, carbs:42, fat:31},
+    {id:"mel", name:"Mel", kcal:304, protein:0.3, carbs:82, fat:0}
+  ];
+
+  /* ================= Storage: Supabase (Postgres) com fallback localStorage =================
+     Tudo é guardado como um único documento JSON (mais simples de manter que
+     várias tabelas). Se window.CLARA_FIT_CONFIG não tiver as chaves do Supabase
+     preenchidas, o app funciona 100% salvando só no navegador, sem precisar de
+     login nenhum. */
+  var SUPA_URL = (window.CLARA_FIT_CONFIG && window.CLARA_FIT_CONFIG.supabaseUrl) || "";
+  var SUPA_KEY = (window.CLARA_FIT_CONFIG && window.CLARA_FIT_CONFIG.supabaseAnonKey) || "";
+  var SUPA_ROW_ID = "clara";
+  var LOCAL_STATE_KEY = "clarafit.state.v2";
+
+  var Storage = (function(){
+    var mode = (SUPA_URL && SUPA_KEY) ? "cloud" : "local";
+    var base = SUPA_URL ? SUPA_URL.replace(/\/$/,"") + "/rest/v1" : "";
+    var headers = {"apikey":SUPA_KEY, "Authorization":"Bearer "+SUPA_KEY, "Content-Type":"application/json"};
+    var data = {recipes:[], foodlog:{}, weightlog:{}, settings:null};
+
+    function localLoad(){
+      try{ var raw = localStorage.getItem(LOCAL_STATE_KEY); return raw ? JSON.parse(raw) : null; }
+      catch(e){ return null; }
+    }
+    function localSave(){
+      try{ localStorage.setItem(LOCAL_STATE_KEY, JSON.stringify(data)); }catch(e){}
+    }
+
+    async function pullCloud(){
+      var res = await fetch(base+"/app_state?id=eq."+SUPA_ROW_ID+"&select=data", {headers:headers});
+      if(!res.ok) throw new Error("http "+res.status);
+      var arr = await res.json();
+      return (arr && arr.length && arr[0].data) ? arr[0].data : null;
+    }
+
+    async function pushCloud(){
+      var res = await fetch(base+"/app_state?on_conflict=id", {
+        method:"POST",
+        headers: Object.assign({}, headers, {"Prefer":"resolution=merge-duplicates,return=minimal"}),
+        body: JSON.stringify([{id:SUPA_ROW_ID, data:data, updated_at:new Date().toISOString()}])
+      });
+      if(!res.ok) throw new Error("http "+res.status);
+    }
+
+    async function persist(){
+      localSave(); // rede de segurança: sempre guarda uma cópia local também
+      if(mode==="cloud"){
+        try{ await pushCloud(); }
+        catch(e){ /* fica salvo no navegador; tenta sincronizar de novo na próxima ação */ }
+      }
+    }
+
+    async function init(){
+      var fallback = {recipes:[], foodlog:{}, weightlog:{}, settings:null};
+      if(mode==="cloud"){
+        try{
+          var cloud = await pullCloud();
+          data = cloud ? Object.assign({}, fallback, cloud) : (localLoad() || fallback);
+        }catch(e){
+          mode = "local";
+          data = localLoad() || fallback;
+        }
+      } else {
+        data = localLoad() || fallback;
+      }
+      return mode;
+    }
+
+    async function loadRecipes(){ return data.recipes || []; }
+
+    async function saveRecipe(recipe){
+      if(!recipe.id){ recipe.id = "r"+Date.now()+Math.random().toString(36).slice(2,7); }
+      var list = data.recipes || [];
+      var idx = list.findIndex(function(r){ return r.id===recipe.id; });
+      if(idx>=0){ list[idx]=recipe; } else { list.push(recipe); }
+      data.recipes = list;
+      await persist();
+      return recipe.id;
+    }
+
+    async function deleteRecipe(id){
+      data.recipes = (data.recipes||[]).filter(function(r){ return r.id!==id; });
+      await persist();
+    }
+
+    async function loadFoodLog(date){
+      return (data.foodlog && data.foodlog[date]) || [];
+    }
+
+    async function saveFoodLog(date, entries){
+      data.foodlog = data.foodlog || {};
+      data.foodlog[date] = entries;
+      await persist();
+    }
+
+    async function loadWeightLog(){
+      var all = data.weightlog || {};
+      return Object.keys(all).map(function(k){ return all[k]; }).sort(function(a,b){ return a.date < b.date ? -1 : 1; });
+    }
+
+    async function saveWeight(date, weightKg){
+      data.weightlog = data.weightlog || {};
+      data.weightlog[date] = {date:date, weightKg:weightKg};
+      await persist();
+    }
+
+    async function deleteWeight(date){
+      if(data.weightlog){ delete data.weightlog[date]; }
+      await persist();
+    }
+
+    async function loadSettings(){ return data.settings || null; }
+
+    async function saveSettings(settings){
+      data.settings = settings;
+      await persist();
+    }
+
+    return {
+      init: init,
+      mode: function(){ return mode; },
+      loadRecipes: loadRecipes, saveRecipe: saveRecipe, deleteRecipe: deleteRecipe,
+      loadFoodLog: loadFoodLog, saveFoodLog: saveFoodLog,
+      loadWeightLog: loadWeightLog, saveWeight: saveWeight, deleteWeight: deleteWeight,
+      loadSettings: loadSettings, saveSettings: saveSettings
+    };
+  })();
+
+  /* ================= Estado ================= */
+  var state = {
+    recipes: [],
+    diaryDate: todayISO(),
+    diaryEntries: [],
+    weightLog: [],
+    settings: null,
+    formIngredients: [],
+    editingRecipeId: null
+  };
+
+  function todayISO(){
+    return new Date().toLocaleDateString("en-CA");
+  }
+  function fmtDateBR(iso){
+    var p = iso.split("-");
+    return p[2]+"/"+p[1];
+  }
+  function round(n){ return Math.round(n*10)/10; }
+  function nf(n){ return Math.round(n).toString(); }
+
+  /* ================= Cálculo de receitas ================= */
+  function ingredientNutrition(ing){
+    var kcal100, protein100, carbs100, fat100;
+    if(ing.catalogId && ing.catalogId !== "custom"){
+      var c = CATALOG.filter(function(x){ return x.id===ing.catalogId; })[0];
+      kcal100 = c ? c.kcal : 0; protein100 = c ? c.protein : 0; carbs100 = c ? c.carbs : 0; fat100 = c ? c.fat : 0;
+    } else {
+      kcal100 = Number(ing.kcal100)||0; protein100 = Number(ing.protein100)||0;
+      carbs100 = Number(ing.carbs100)||0; fat100 = Number(ing.fat100)||0;
+    }
+    var g = Number(ing.grams)||0;
+    var factor = g/100;
+    return {
+      kcal: kcal100*factor, protein: protein100*factor, carbs: carbs100*factor, fat: fat100*factor
+    };
+  }
+
+  function recipeTotals(recipe){
+    var totals = {kcal:0, protein:0, carbs:0, fat:0};
+    (recipe.ingredients||[]).forEach(function(ing){
+      var n = ingredientNutrition(ing);
+      totals.kcal += n.kcal; totals.protein += n.protein; totals.carbs += n.carbs; totals.fat += n.fat;
+    });
+    return totals;
+  }
+
+  function recipePerServing(recipe){
+    var t = recipeTotals(recipe);
+    var servings = Math.max(Number(recipe.servings)||1, 1);
+    return {
+      kcal: t.kcal/servings, protein: t.protein/servings, carbs: t.carbs/servings, fat: t.fat/servings
+    };
+  }
+
+  function ingredientLabel(ing){
+    if(ing.catalogId && ing.catalogId !== "custom"){
+      var c = CATALOG.filter(function(x){ return x.id===ing.catalogId; })[0];
+      return c ? c.name : "Ingrediente";
+    }
+    return ing.customName || "Ingrediente personalizado";
+  }
+
+  /* ================= Cálculo de meta calórica ================= */
+  function computeGoal(s){
+    var w = Number(s.currentWeightKg), h = Number(s.heightCm), a = Number(s.age);
+    var bmr;
+    if(s.sex==="m") bmr = 10*w + 6.25*h - 5*a + 5;
+    else if(s.sex==="f") bmr = 10*w + 6.25*h - 5*a - 161;
+    else bmr = 10*w + 6.25*h - 5*a - 78;
+    var tdee = bmr * Number(s.activityFactor||1.55);
+    var dailyDeficit = Number(s.weeklyPaceKg||0.5) * 1100; // ~7700 kcal/kg de gordura ÷ 7 dias
+    var floor = s.sex==="m" ? 1500 : 1200;
+    var rawGoal = tdee - dailyDeficit;
+    var goal = Math.max(rawGoal, floor);
+    return {
+      bmr: bmr, tdee: tdee, deficit: dailyDeficit, rawGoal: rawGoal, goal: goal,
+      belowFloor: rawGoal < floor, floor: floor
+    };
+  }
+
+  /* ================= Render: resumo estilo rótulo nutricional ================= */
+  function consumedToday(){
+    return state.diaryEntries.reduce(function(sum, e){ return sum + (Number(e.kcal)||0); }, 0);
+  }
+
+  function renderLabelPanel(container, dateLabel, consumed, goalKcal){
+    var hasGoal = goalKcal != null;
+    var remain = hasGoal ? goalKcal - consumed : null;
+    var pct = hasGoal ? Math.min(100, (consumed/goalKcal)*100) : 0;
+    var over = hasGoal && consumed > goalKcal;
+
+    var html = "";
+    html += '<div class="label-title">INFORMAÇÃO DO DIA</div>';
+    html += '<div class="label-sub">'+dateLabel+'</div>';
+    html += '<div class="label-row big"><span class="lbl">Consumido</span><span class="val num">'+nf(consumed)+' kcal</span></div>';
+    html += '<div class="label-row"><span class="lbl">Meta diária</span><span class="val num">'+(hasGoal ? nf(goalKcal)+' kcal' : '—')+'</span></div>';
+    html += '<div class="label-row remain"><span class="lbl">'+(over ? 'Acima da meta' : 'Restante')+'</span><span class="val num">'+(hasGoal ? nf(Math.abs(remain))+' kcal' : '—')+'</span></div>';
+    html += '<div class="bar-track"><div class="bar-fill'+(over?' over':'')+'" style="width:'+pct+'%"></div></div>';
+    html += '<div class="bar-caption'+(over?' warn':'')+'">'+(hasGoal ? (over ? 'Você passou a meta de hoje.' : nf(pct)+'% da meta consumida') : 'Defina sua meta na aba “Meta” para acompanhar o progresso.')+'</div>';
+    container.innerHTML = html;
+  }
+
+  function renderSummaries(){
+    var goalKcal = state.settings ? computeGoal(state.settings).goal : null;
+    var consumed = consumedToday();
+    var dateLabel = state.diaryDate === todayISO() ? "Hoje, "+fmtDateBR(state.diaryDate) : fmtDateBR(state.diaryDate);
+    renderLabelPanel(document.getElementById("heroSummary"), dateLabel, consumed, goalKcal);
+  }
+
+  /* ================= Render: Diário ================= */
+  function renderDiary(){
+    var body = document.getElementById("diaryBody");
+    var empty = document.getElementById("diaryEmpty");
+    body.innerHTML = "";
+    if(state.diaryEntries.length===0){
+      empty.hidden = false;
+    } else {
+      empty.hidden = true;
+      state.diaryEntries.forEach(function(e){
+        var tr = document.createElement("tr");
+        tr.innerHTML = '<td>'+escapeHtml(e.name)+'</td><td>'+escapeHtml(e.qtyLabel)+'</td><td class="num">'+nf(e.kcal)+'</td>'+
+          '<td><button class="row-remove" data-remove-entry="'+e.id+'" type="button" aria-label="Remover">×</button></td>';
+        body.appendChild(tr);
+      });
+    }
+    renderSummaries();
+  }
+
+  function renderEntryFields(){
+    var source = document.querySelector('input[name="source"]:checked').value;
+    var wrap = document.getElementById("entryFields");
+    if(source==="recipe"){
+      var opts = state.recipes.map(function(r){
+        var per = recipePerServing(r);
+        return '<option value="'+r.id+'">'+escapeHtml(r.name)+' ('+nf(per.kcal)+' kcal/porção)</option>';
+      }).join("");
+      wrap.innerHTML =
+        '<div class="field"><label for="entryRecipe">Receita</label><select id="entryRecipe">'+(opts || '<option value="">Nenhuma receita cadastrada</option>')+'</select></div>'+
+        '<div class="field"><label for="entryServings">Porções consumidas</label><input id="entryServings" type="number" min="0.25" step="0.25" value="1"></div>';
+    } else if(source==="ingredient"){
+      var iopts = CATALOG.map(function(c){ return '<option value="'+c.id+'">'+c.name+'</option>'; }).join("");
+      wrap.innerHTML =
+        '<div class="field"><label for="entryIngredient">Ingrediente</label><select id="entryIngredient">'+iopts+'</select></div>'+
+        '<div class="field"><label for="entryGrams">Quantidade (g)</label><input id="entryGrams" type="number" min="1" step="1" value="100"></div>';
+    } else {
+      wrap.innerHTML =
+        '<div class="field"><label for="entryName">Nome do item</label><input id="entryName" placeholder="Ex.: Prato no restaurante"></div>'+
+        '<div class="field"><label for="entryKcal">Calorias (kcal)</label><input id="entryKcal" type="number" min="0" step="1"></div>';
+    }
+  }
+
+  async function addDiaryEntry(entry){
+    entry.id = "e"+Date.now()+Math.random().toString(36).slice(2,6);
+    state.diaryEntries.push(entry);
+    await Storage.saveFoodLog(state.diaryDate, state.diaryEntries);
+    renderDiary();
+  }
+
+  async function removeDiaryEntry(id){
+    state.diaryEntries = state.diaryEntries.filter(function(e){ return e.id!==id; });
+    await Storage.saveFoodLog(state.diaryDate, state.diaryEntries);
+    renderDiary();
+  }
+
+  /* ================= Render: Receitas ================= */
+  function renderRecipes(){
+    var grid = document.getElementById("recipeGrid");
+    grid.innerHTML = "";
+    state.recipes.forEach(function(r){
+      var per = recipePerServing(r);
+      var card = document.createElement("div");
+      card.className = "recipe-card";
+      card.innerHTML =
+        '<div>'+(r.example ? '<div class="rc-example">Exemplo — edite ou exclua</div>' : '')+'<div class="rc-name">'+escapeHtml(r.name)+'</div></div>'+
+        '<div class="rc-kcal">'+nf(per.kcal)+' <small>kcal / porção</small></div>'+
+        '<div class="rc-macros"><span>P '+round(per.protein)+'g</span><span>C '+round(per.carbs)+'g</span><span>G '+round(per.fat)+'g</span></div>'+
+        '<div style="font-size:11.5px;color:var(--muted);">Rende '+r.servings+' porção(ões)</div>'+
+        '<div class="rc-actions"><button class="btn btn-ghost btn-sm" data-edit-recipe="'+r.id+'" type="button">Editar</button>'+
+        '<button class="btn btn-ghost btn-sm btn-danger-outline" data-delete-recipe="'+r.id+'" type="button">Excluir</button></div>';
+      grid.appendChild(card);
+    });
+    var tile = document.createElement("button");
+    tile.type = "button";
+    tile.className = "new-recipe-tile";
+    tile.textContent = "+ Nova receita";
+    tile.addEventListener("click", function(){ openRecipeForm(null); });
+    grid.appendChild(tile);
+  }
+
+  function blankIngredientRow(){
+    return {catalogId:"peito_frango", grams:100, customName:"", kcal100:0, protein100:0, carbs100:0, fat100:0};
+  }
+
+  function openRecipeForm(recipe){
+    state.editingRecipeId = recipe ? recipe.id : null;
+    document.getElementById("recipeId").value = recipe ? recipe.id : "";
+    document.getElementById("recipeName").value = recipe ? recipe.name : "";
+    document.getElementById("recipeServings").value = recipe ? recipe.servings : 1;
+    state.formIngredients = recipe ? JSON.parse(JSON.stringify(recipe.ingredients)) : [blankIngredientRow()];
+    document.getElementById("recipeFormWrap").hidden = false;
+    renderIngredientRows();
+    document.getElementById("recipeFormWrap").scrollIntoView({behavior:"smooth", block:"start"});
+  }
+
+  function closeRecipeForm(){
+    document.getElementById("recipeFormWrap").hidden = true;
+    state.editingRecipeId = null;
+  }
+
+  function renderIngredientRows(){
+    var wrap = document.getElementById("ingredientRows");
+    wrap.innerHTML = "";
+    var catalogOptions = '<option value="custom">Personalizado…</option>' + CATALOG.map(function(c){
+      return '<option value="'+c.id+'">'+c.name+'</option>';
+    }).join("");
+
+    var head = document.createElement("div");
+    head.className = "ingredient-row ingredient-row-head";
+    head.innerHTML =
+      '<span class="ing-col-label">Ingrediente</span><span class="ing-col-label">Gramas</span><span class="ing-col-label">Kcal</span><span></span>';
+    wrap.appendChild(head);
+
+    state.formIngredients.forEach(function(ing, idx){
+      var row = document.createElement("div");
+      row.className = "ingredient-row";
+      var isCustom = ing.catalogId === "custom";
+      row.innerHTML =
+        '<select aria-label="Ingrediente" data-ing-field="catalogId" data-ing-idx="'+idx+'">'+catalogOptions+'</select>'+
+        '<input type="number" min="0" step="1" value="'+ing.grams+'" aria-label="Gramas" data-ing-field="grams" data-ing-idx="'+idx+'">'+
+        '<input class="num" disabled aria-label="Calorias calculadas" value="'+nf(ingredientNutrition(ing).kcal)+'">'+
+        '<button class="ing-remove" type="button" data-remove-ing="'+idx+'" aria-label="Remover ingrediente">×</button>';
+
+      if(isCustom){
+        var custom = document.createElement("div");
+        custom.className = "custom-fields";
+        custom.innerHTML =
+          '<input placeholder="Nome" value="'+escapeAttr(ing.customName||"")+'" data-ing-field="customName" data-ing-idx="'+idx+'">'+
+          '<input type="number" min="0" step="0.1" placeholder="Kcal/100g" value="'+(ing.kcal100||0)+'" data-ing-field="kcal100" data-ing-idx="'+idx+'">'+
+          '<input type="number" min="0" step="0.1" placeholder="Proteína/100g" value="'+(ing.protein100||0)+'" data-ing-field="protein100" data-ing-idx="'+idx+'">'+
+          '<input type="number" min="0" step="0.1" placeholder="Carbo/100g" value="'+(ing.carbs100||0)+'" data-ing-field="carbs100" data-ing-idx="'+idx+'">';
+        row.appendChild(custom);
+      }
+      wrap.appendChild(row);
+      row.querySelector('select[data-ing-field="catalogId"]').value = ing.catalogId;
+    });
+
+    renderRecipeTotals();
+  }
+
+  function renderRecipeTotals(){
+    var fake = {ingredients: state.formIngredients, servings: Number(document.getElementById("recipeServings").value)||1};
+    var t = recipeTotals(fake);
+    var per = recipePerServing(fake);
+    document.getElementById("recipeTotals").innerHTML =
+      '<div class="rt-item">Total da receita<b class="num">'+nf(t.kcal)+' kcal</b></div>'+
+      '<div class="rt-item">Por porção<b class="num">'+nf(per.kcal)+' kcal</b></div>'+
+      '<div class="rt-item">Proteína / porção<b class="num">'+round(per.protein)+' g</b></div>'+
+      '<div class="rt-item">Carbo / porção<b class="num">'+round(per.carbs)+' g</b></div>'+
+      '<div class="rt-item">Gordura / porção<b class="num">'+round(per.fat)+' g</b></div>';
+  }
+
+  async function saveRecipeFromForm(){
+    var recipe = {
+      id: document.getElementById("recipeId").value || undefined,
+      name: document.getElementById("recipeName").value.trim(),
+      servings: Number(document.getElementById("recipeServings").value)||1,
+      ingredients: state.formIngredients,
+      example: false
+    };
+    var savedId = await Storage.saveRecipe(recipe);
+    recipe.id = savedId;
+    var idx = state.recipes.findIndex(function(r){ return r.id===savedId; });
+    if(idx>=0) state.recipes[idx] = recipe; else state.recipes.push(recipe);
+    closeRecipeForm();
+    renderRecipes();
+    renderEntryFields();
+  }
+
+  async function deleteRecipeById(id){
+    state.recipes = state.recipes.filter(function(r){ return r.id!==id; });
+    await Storage.deleteRecipe(id);
+    renderRecipes();
+    renderEntryFields();
+  }
+
+  /* ================= Render: Peso / gráfico ================= */
+  function buildWeightChartSVG(entries){
+    var w = 640, h = 220, padL = 42, padR = 74, padT = 16, padB = 30;
+    var values = entries.map(function(e){ return e.weightKg; });
+    var min = Math.min.apply(null, values), max = Math.max.apply(null, values);
+    if(min===max){ min -= 1; max += 1; }
+    var span = max-min;
+    function yFor(v){ return padT + (1-((v-min)/span)) * (h-padT-padB); }
+    function xFor(i){ return entries.length<=1 ? (w+padL)/2 : padL + (i/(entries.length-1)) * (w-padL-padR); }
+
+    var pts = entries.map(function(e,i){ return xFor(i)+","+yFor(e.weightKg); }).join(" ");
+    var areaPts = pts + " " + xFor(entries.length-1)+","+(h-padB) + " " + xFor(0)+","+(h-padB);
+
+    var gridLines = "";
+    var ticks = 4;
+    for(var i=0;i<=ticks;i++){
+      var v = min + (span*i/ticks);
+      var y = yFor(v);
+      gridLines += '<line x1="'+padL+'" y1="'+y+'" x2="'+(w-padR)+'" y2="'+y+'" stroke="var(--line)" stroke-width="1"/>';
+      gridLines += '<text x="'+(padL-8)+'" y="'+(y+4)+'" text-anchor="end" font-family="var(--font-mono)" font-size="10.5" fill="var(--muted)">'+round(v)+'</text>';
+    }
+
+    var dateLabels = "";
+    var labelEvery = Math.max(1, Math.ceil(entries.length/5));
+    entries.forEach(function(e,i){
+      if(i%labelEvery===0 || i===entries.length-1){
+        dateLabels += '<text x="'+xFor(i)+'" y="'+(h-8)+'" text-anchor="middle" font-family="var(--font-mono)" font-size="10.5" fill="var(--muted)">'+fmtDateBR(e.date)+'</text>';
+      }
+    });
+
+    var dots = entries.map(function(e,i){
+      var isLast = i===entries.length-1;
+      return '<circle cx="'+xFor(i)+'" cy="'+yFor(e.weightKg)+'" r="'+(isLast?5:3)+'" fill="'+(isLast?'var(--ink)':'var(--surface)')+'" stroke="var(--ink)" stroke-width="'+(isLast?0:1.5)+'"/>';
+    }).join("");
+
+    var last = entries[entries.length-1];
+
+    return '<svg viewBox="0 0 '+w+' '+h+'" role="img" aria-label="Gráfico de evolução do peso">'+
+      gridLines +
+      '<polygon points="'+areaPts+'" fill="var(--surface-2)" opacity="0.7"/>'+
+      '<polyline points="'+pts+'" fill="none" stroke="var(--ink)" stroke-width="2.5"/>'+
+      dots +
+      dateLabels +
+      '<text x="'+(xFor(entries.length-1)+6)+'" y="'+(yFor(last.weightKg)-12)+'" text-anchor="start" font-family="var(--font-mono)" font-weight="600" font-size="12" fill="var(--ink)">'+round(last.weightKg)+' kg</text>'+
+      '</svg>';
+  }
+
+  function renderWeight(){
+    var body = document.getElementById("weightBody");
+    var empty = document.getElementById("weightEmpty");
+    var holder = document.getElementById("chartHolder");
+    var stats = document.getElementById("weightStats");
+    body.innerHTML = "";
+
+    if(state.weightLog.length===0){
+      empty.hidden = false;
+      holder.innerHTML = '<p class="empty-state">Registre pelo menos dois pesos para ver o gráfico de evolução.</p>';
+      stats.innerHTML = "";
+    } else {
+      empty.hidden = true;
+      state.weightLog.slice().reverse().forEach(function(e){
+        var tr = document.createElement("tr");
+        tr.innerHTML = '<td>'+fmtDateBR(e.date)+'</td><td class="num">'+round(e.weightKg)+'</td>'+
+          '<td><button class="row-remove" data-remove-weight="'+e.date+'" type="button" aria-label="Remover">×</button></td>';
+        body.appendChild(tr);
+      });
+
+      if(state.weightLog.length>=2){
+        holder.innerHTML = buildWeightChartSVG(state.weightLog);
+      } else {
+        holder.innerHTML = '<p class="empty-state">Registre mais um peso para ver o gráfico de evolução.</p>';
+      }
+
+      var first = state.weightLog[0], last = state.weightLog[state.weightLog.length-1];
+      var target = state.settings ? Number(state.settings.targetWeightKg) : null;
+      var statsHtml = '<div class="ws">Início<b class="num">'+round(first.weightKg)+' kg</b></div>'+
+        '<div class="ws">Atual<b class="num">'+round(last.weightKg)+' kg</b></div>';
+      if(target){
+        statsHtml += '<div class="ws">Meta<b class="num">'+round(target)+' kg</b></div>'+
+          '<div class="ws">Faltam<b class="num">'+round(Math.max(last.weightKg-target,0))+' kg</b></div>';
+      }
+      stats.innerHTML = statsHtml;
+    }
+  }
+
+  async function addWeight(date, kg){
+    var idx = state.weightLog.findIndex(function(e){ return e.date===date; });
+    if(idx>=0) state.weightLog[idx].weightKg = kg; else { state.weightLog.push({date:date, weightKg:kg}); }
+    state.weightLog.sort(function(a,b){ return a.date<b.date?-1:1; });
+    await Storage.saveWeight(date, kg);
+    renderWeight();
+  }
+
+  async function removeWeight(date){
+    state.weightLog = state.weightLog.filter(function(e){ return e.date!==date; });
+    await Storage.deleteWeight(date);
+    renderWeight();
+  }
+
+  /* ================= Render: Meta ================= */
+  function renderMetaForm(){
+    var s = state.settings;
+    document.getElementById("metaName").value = s ? s.name : "Clara Larissa Ferreira de Araújo";
+    if(s){
+      document.getElementById("metaSex").value = s.sex;
+      document.getElementById("metaAge").value = s.age;
+      document.getElementById("metaHeight").value = s.heightCm;
+      document.getElementById("metaWeight").value = s.currentWeightKg;
+      document.getElementById("metaTarget").value = s.targetWeightKg;
+      document.getElementById("metaActivity").value = s.activityFactor;
+      document.getElementById("metaPace").value = s.weeklyPaceKg;
+      renderMetaResult(s);
+    } else if(state.weightLog.length>0){
+      document.getElementById("metaWeight").value = state.weightLog[state.weightLog.length-1].weightKg;
+    }
+  }
+
+  function renderMetaResult(s){
+    var g = computeGoal(s);
+    var weeksToGoal = null;
+    if(s.targetWeightKg && s.currentWeightKg > s.targetWeightKg && g.deficit>0){
+      weeksToGoal = ((s.currentWeightKg - s.targetWeightKg) * 1100 * 7) / (g.deficit*7);
+      weeksToGoal = (s.currentWeightKg - s.targetWeightKg) * 7700 / (g.deficit*7);
+    }
+    var html = '<div class="label-title">SUA META DIÁRIA</div>';
+    html += '<div class="label-row"><span class="lbl">Taxa Metabólica Basal (TMB)</span><span class="val num">'+nf(g.bmr)+' kcal</span></div>';
+    html += '<div class="label-row"><span class="lbl">Gasto total estimado (TDEE)</span><span class="val num">'+nf(g.tdee)+' kcal</span></div>';
+    html += '<div class="label-row"><span class="lbl">Déficit para emagrecer</span><span class="val num">-'+nf(g.deficit)+' kcal</span></div>';
+    html += '<div class="label-row big"><span class="lbl">Meta diária</span><span class="val num">'+nf(g.goal)+' kcal</span></div>';
+    if(weeksToGoal){
+      html += '<div class="label-row"><span class="lbl">Estimativa até o peso alvo</span><span class="val num">~'+Math.max(1,Math.round(weeksToGoal))+' semanas</span></div>';
+    }
+    if(g.belowFloor){
+      html += '<div class="warning-box"><span class="wb-title">Atenção</span>O déficit escolhido levaria a meta abaixo de '+g.floor+' kcal/dia, um patamar considerado baixo demais sem acompanhamento. Por segurança, a meta foi ajustada para '+g.floor+' kcal. Considere um ritmo de emagrecimento mais leve ou procure um nutricionista.</div>';
+    }
+    html += '<p style="font-size:11.5px;color:var(--muted);margin-top:14px;">Estimativa baseada na fórmula de Mifflin-St Jeor. Não substitui avaliação profissional.</p>';
+    document.getElementById("metaResult").hidden = false;
+    document.getElementById("metaResult").innerHTML = html;
+  }
+
+  async function saveMetaFromForm(){
+    var s = {
+      name: document.getElementById("metaName").value.trim() || "Clara Larissa Ferreira de Araújo",
+      sex: document.getElementById("metaSex").value,
+      age: Number(document.getElementById("metaAge").value),
+      heightCm: Number(document.getElementById("metaHeight").value),
+      currentWeightKg: Number(document.getElementById("metaWeight").value),
+      targetWeightKg: Number(document.getElementById("metaTarget").value),
+      activityFactor: Number(document.getElementById("metaActivity").value),
+      weeklyPaceKg: Number(document.getElementById("metaPace").value)
+    };
+    state.settings = s;
+    await Storage.saveSettings(s);
+    renderMetaResult(s);
+    renderSummaries();
+  }
+
+  /* ================= Utilitários ================= */
+  function escapeHtml(str){
+    return String(str==null?"":str).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+  function escapeAttr(str){ return escapeHtml(str); }
+
+  /* ================= Navegação por abas ================= */
+  function goToTab(name){
+    document.querySelectorAll(".tab").forEach(function(t){ t.classList.toggle("active", t.dataset.tab===name); });
+    document.querySelectorAll(".tabpanel").forEach(function(p){ p.classList.toggle("active", p.id==="tab-"+name); });
+  }
+
+  /* ================= Wire-up de eventos ================= */
+  function wireEvents(){
+    document.getElementById("tabs").addEventListener("click", function(e){
+      var btn = e.target.closest("[data-tab]");
+      if(btn) goToTab(btn.dataset.tab);
+    });
+    document.querySelectorAll("[data-goto]").forEach(function(b){
+      b.addEventListener("click", function(){ goToTab(b.dataset.goto); });
+    });
+
+    document.getElementById("diaryDate").value = state.diaryDate;
+    document.getElementById("diaryDate").addEventListener("change", async function(e){
+      state.diaryDate = e.target.value;
+      state.diaryEntries = await Storage.loadFoodLog(state.diaryDate);
+      renderDiary();
+    });
+
+    document.querySelectorAll('input[name="source"]').forEach(function(r){
+      r.addEventListener("change", renderEntryFields);
+    });
+    renderEntryFields();
+
+    document.getElementById("addEntryForm").addEventListener("submit", function(e){
+      e.preventDefault();
+      var source = document.querySelector('input[name="source"]:checked').value;
+      if(source==="recipe"){
+        var recId = document.getElementById("entryRecipe").value;
+        var recipe = state.recipes.filter(function(r){ return r.id===recId; })[0];
+        if(!recipe) return;
+        var servings = Number(document.getElementById("entryServings").value)||1;
+        var per = recipePerServing(recipe);
+        addDiaryEntry({name:recipe.name, qtyLabel: servings+" porção(ões)", kcal: per.kcal*servings});
+      } else if(source==="ingredient"){
+        var ingId = document.getElementById("entryIngredient").value;
+        var cat = CATALOG.filter(function(c){ return c.id===ingId; })[0];
+        var grams = Number(document.getElementById("entryGrams").value)||0;
+        addDiaryEntry({name:cat.name, qtyLabel: grams+" g", kcal: cat.kcal*(grams/100)});
+      } else {
+        var name = document.getElementById("entryName").value.trim() || "Item manual";
+        var kcal = Number(document.getElementById("entryKcal").value)||0;
+        addDiaryEntry({name:name, qtyLabel:"—", kcal:kcal});
+      }
+      e.target.reset();
+      renderEntryFields();
+    });
+
+    document.getElementById("diaryBody").addEventListener("click", function(e){
+      var btn = e.target.closest("[data-remove-entry]");
+      if(btn) removeDiaryEntry(btn.dataset.removeEntry);
+    });
+
+    document.getElementById("newRecipeBtn").addEventListener("click", function(){ openRecipeForm(null); });
+    document.getElementById("cancelRecipeBtn").addEventListener("click", closeRecipeForm);
+
+    document.getElementById("addIngredientBtn").addEventListener("click", function(){
+      state.formIngredients.push(blankIngredientRow());
+      renderIngredientRows();
+    });
+
+    document.getElementById("ingredientRows").addEventListener("input", function(e){
+      var field = e.target.dataset.ingField;
+      if(!field) return;
+      var idx = Number(e.target.dataset.ingIdx);
+      var value = e.target.value;
+      state.formIngredients[idx][field] = (field==="grams"||field==="kcal100"||field==="protein100"||field==="carbs100"||field==="fat100") ? Number(value) : value;
+      if(field==="catalogId"){ renderIngredientRows(); }
+      else {
+        var row = e.target.closest(".ingredient-row");
+        row.querySelector('input[disabled]').value = nf(ingredientNutrition(state.formIngredients[idx]).kcal);
+        renderRecipeTotals();
+      }
+    });
+    document.getElementById("ingredientRows").addEventListener("click", function(e){
+      var btn = e.target.closest("[data-remove-ing]");
+      if(!btn) return;
+      var idx = Number(btn.dataset.removeIng);
+      state.formIngredients.splice(idx,1);
+      if(state.formIngredients.length===0) state.formIngredients.push(blankIngredientRow());
+      renderIngredientRows();
+    });
+    document.getElementById("recipeServings").addEventListener("input", renderRecipeTotals);
+
+    document.getElementById("recipeForm").addEventListener("submit", function(e){
+      e.preventDefault();
+      saveRecipeFromForm();
+    });
+
+    document.getElementById("recipeGrid").addEventListener("click", function(e){
+      var editBtn = e.target.closest("[data-edit-recipe]");
+      var delBtn = e.target.closest("[data-delete-recipe]");
+      if(editBtn){
+        var r = state.recipes.filter(function(x){ return x.id===editBtn.dataset.editRecipe; })[0];
+        if(r) openRecipeForm(r);
+      } else if(delBtn){
+        deleteRecipeById(delBtn.dataset.deleteRecipe);
+      }
+    });
+
+    document.getElementById("weightDate").value = todayISO();
+    document.getElementById("weightForm").addEventListener("submit", function(e){
+      e.preventDefault();
+      var date = document.getElementById("weightDate").value;
+      var kg = Number(document.getElementById("weightKg").value);
+      if(!date || !kg) return;
+      addWeight(date, kg);
+      e.target.reset();
+      document.getElementById("weightDate").value = todayISO();
+    });
+    document.getElementById("weightBody").addEventListener("click", function(e){
+      var btn = e.target.closest("[data-remove-weight]");
+      if(btn) removeWeight(btn.dataset.removeWeight);
+    });
+
+    document.getElementById("metaForm").addEventListener("submit", function(e){
+      e.preventDefault();
+      saveMetaFromForm();
+    });
+  }
+
+  /* ================= Inicialização ================= */
+  function exampleRecipe(){
+    return {
+      id: "example-1",
+      name: "Omelete fit de claras com espinafre",
+      servings: 1,
+      example: true,
+      ingredients: [
+        {catalogId:"clara_ovo", grams:150},
+        {catalogId:"espinafre", grams:40},
+        {catalogId:"azeite", grams:5},
+        {catalogId:"tomate", grams:50}
+      ]
+    };
+  }
+
+  async function init(){
+    var mode = await Storage.init();
+    document.getElementById("syncDot").classList.toggle("local", mode!=="cloud");
+    document.getElementById("syncLabel").textContent = mode==="cloud" ? "sincronizado na nuvem" : "salvo neste aparelho";
+
+    state.recipes = await Storage.loadRecipes();
+    if(state.recipes.length===0){
+      state.recipes = [exampleRecipe()];
+    }
+    state.diaryEntries = await Storage.loadFoodLog(state.diaryDate);
+    state.weightLog = await Storage.loadWeightLog();
+    state.settings = await Storage.loadSettings();
+
+    wireEvents();
+    renderRecipes();
+    renderDiary();
+    renderWeight();
+    renderMetaForm();
+    renderSummaries();
+  }
+
+  document.addEventListener("DOMContentLoaded", init);
+})();
+</script>
+
+</body>
+</html>
